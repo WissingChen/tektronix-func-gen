@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
-"""
-.. include:: ./README.md
-
-"""
-
+# @encoding: utf-8
+# @author  : wissingcc
+# @contact : chen867820261@gmail.com
+# @software: PyCharm
+# @file    : FuncGen.py
+# @time    : 2021/7/27 15:54
 import copy
 import pyvisa
 import numpy as np
@@ -11,17 +11,13 @@ from typing import Tuple, List, Union
 
 
 _VISA_ADDRESS = "USB0::0x0699::0x0353::1731975::INSTR"
-
-
 def _SI_prefix_to_factor(unit):
     """Convert an SI prefix to a numerical factor
-
     Parameters
     ----------
     unit : str
         The unit whose first character is checked against the list of
         prefactors {"M": 1e6, "k": 1e3, "m": 1e-3}
-
     Returns
     -------
     factor : float or `None`
@@ -55,7 +51,6 @@ class NotCompatibleError(Exception):
 
 class FuncGen:
     """Class for interacting with Tektronix function generator
-
     Parameters
     ----------
     visa_address : str
@@ -77,7 +72,6 @@ class FuncGen:
         AFG1022, AFG1062, or AFG3022 limits, use their respecive model names as
         argument. Note that this might lead to unexpected behaviour for custom
         waveforms and 'MIN'/'MAX' keywords.
-
     Attributes
     ----------
     _visa_address : str
@@ -95,7 +89,6 @@ class FuncGen:
         => 2**14-1 = 16383
     _max_waveform_memory_user_locations : int
         The number of the last user memory location available
-
     Raises
     ------
     pyvisa.Error
@@ -111,7 +104,6 @@ class FuncGen:
 
     instrument_limits = {}
     """dict: Contains the following keys with subdictionaries
-
         - `frequency lims`
           Containing the frequency limits for the instrument where the keys
           "min" and "max" have values corresponding to minimum and maximum
@@ -204,7 +196,6 @@ class FuncGen:
     def _initialise_model_properties(self):
         """Initialises the limits of what the instrument can handle according
         to the instrument model
-
         Raises
         ------
         NotCompatibleError
@@ -265,6 +256,25 @@ class FuncGen:
             self._arbitrary_waveform_length = [2, 65536]  # min length, max length
             self._arbitrary_waveform_resolution = 16383  # 14 bit
             self._max_waveform_memory_user_locations = 4
+        # todo 3102
+        elif np.any(["AFG3102" in a for a in [self._model, self._override_compat]]):
+            self.instrument_limits = {
+                "frequency lims": ({"min": 1e-6, "max": 100e6}, "Hz"),
+                "voltage lims": (
+                    {"50ohm": {"min": -5, "max": 5}, "highZ": {"min": -10, "max": 10}},
+                    "V",
+                ),
+                "amplitude lims": (
+                    {
+                        "50ohm": {"min": 0.02, "max": 10},
+                        "highZ": {"min": 0.04, "max": 20},
+                    },
+                    "Vpp",
+                ),
+            }
+            self._arbitrary_waveform_length = [2, 65536]  # min length, max length
+            self._arbitrary_waveform_resolution = 16383  # 14 bit
+            self._max_waveform_memory_user_locations = 4
         else:
             msg = (
                 f"Model {self._model} might not be fully supported!\n"
@@ -278,7 +288,6 @@ class FuncGen:
 
     def write(self, command: str, custom_err_message: str = None) -> int:
         """Write a VISA command to the instrument
-
         Parameters
         ----------
         command : str
@@ -288,12 +297,10 @@ class FuncGen:
             {command} failed: pyvisa returned StatusCode ..".
             Otherwise, if a message is supplied "Could not {message}:
             pyvisa returned StatusCode .."
-
         Returns
         -------
         bytes : int
             Number of bytes tranferred
-
         Raises
         ------
         RuntimeError
@@ -306,7 +313,6 @@ class FuncGen:
 
     def query(self, command: str, custom_err_message: str = None) -> str:
         """Query the instrument
-
         Parameters
         ----------
         command : str
@@ -316,12 +322,10 @@ class FuncGen:
             {command} failed: pyvisa returned StatusCode ..".
             Otherwise, if a message is supplied "Could not {message}:
             pyvisa returned StatusCode .."
-
         Returns
         -------
         str
             The instrument's response
-
         Raises
         ------
         RuntimeError
@@ -334,17 +338,14 @@ class FuncGen:
 
     def _check_pyvisa_status(self, command: str, custom_err_message: str = None):
         """Check the last status code of PyVISA
-
         Parameters
         ----------
         command : str
             The VISA write/query command
-
         Returns
         -------
         status : pyvisa.constants.StatusCode
             Return value of the library call
-
         Raises
         ------
         RuntimeError
@@ -368,7 +369,6 @@ class FuncGen:
 
     def get_error(self) -> str:
         """Get the contents of the Error/Event queue on the device
-
         Returns
         -------
         str
@@ -383,7 +383,6 @@ class FuncGen:
 
     def get_settings(self) -> List[dict]:
         """Get dictionaries of the current settings of the two channels
-
         Returns
         -------
         settings : list of dicts
@@ -418,10 +417,8 @@ class FuncGen:
 
     def set_settings(self, settings: List[dict]):
         """Set the settings of both channels with settings dictionaries
-
         (Each channel is turned off before applying the changes to avoid
         potentially harmful combinations)
-
         Parameteres
         -----------
         settings : list of dicts
@@ -434,7 +431,6 @@ class FuncGen:
 
     def syncronise_waveforms(self):
         """Syncronise waveforms of the two channels when using the same frequency
-
         Note: Does NOT enable the frequency lock that can be enabled on the
         user interface of the instrument)
         """
@@ -442,7 +438,6 @@ class FuncGen:
 
     def get_frequency_lock(self) -> bool:
         """Check if frequency lock is enabled
-
         Returns
         -------
         bool
@@ -454,9 +449,7 @@ class FuncGen:
     def set_frequency_lock(self, state: str, use_channel: int = 1):
         """Enable the frequency lock to make the two channels have the same
         frequency and phase of their signals, also after adjustments.
-
         See also `FuncGen.syncronise_waveforms` for one-time sync only.
-
         Parameters
         ----------
         state : {"ON", "OFF"}
@@ -492,7 +485,6 @@ class FuncGen:
 
     def get_waveform_catalogue(self) -> List[str]:
         """Get list of the waveforms that are in use (not empty)
-
         Returns
         -------
         catalogue : list
@@ -504,12 +496,10 @@ class FuncGen:
 
     def get_custom_waveform(self, memory_num: int) -> np.ndarray:
         """Get the waveform currently stored in USER<memory_num>
-
         Parameters
         ----------
         memory_num : str or int {0,...,255}, default 0
             Select which user memory to compare with
-
         Returns
         -------
         waveform : ndarray
@@ -550,7 +540,6 @@ class FuncGen:
     ):
         """Transfer waveform data to edit memory and then user memory.
         NOTE: Will overwrite without warnings
-
         Parameters
         ----------
         waveform : ndarray
@@ -564,12 +553,10 @@ class FuncGen:
         verify : bool, default `True`
             Verify that the waveform has been transferred and is what was sent
         print_progress : bool, default `True`
-
         Returns
         -------
         waveform : ndarray
             The normalised waveform transferred
-
         Raises
         ------
         ValueError
@@ -638,19 +625,16 @@ class FuncGen:
     def _normalise_to_waveform(self, shape: np.ndarray) -> np.ndarray:
         """Normalise a shape of any discretisation and range to a waveform that
         can be transmitted to the function generator
-
         .. note::
             If you are transferring a flat/constant waveform, do not use this
             normaisation function. Transfer a waveform like
             `int(self._arbitrary_waveform_resolution/2)*np.ones(2).astype(np.int32)`
             without normalising for a well behaved flat function.
-
         Parameters
         ----------
         shape : array_like
             Array to be transformed to waveform, can be ints or floats,
             any normalisation or discretisation
-
         Returns
         -------
         waveform : ndarray
@@ -672,7 +656,6 @@ class FuncGen:
         print_result: bool = True,
     ) -> Tuple[bool, np.ndarray, list]:
         """Compare a waveform in user memory to argument waveform
-
         Parameters
         ----------
         waveform : ndarray
@@ -681,7 +664,6 @@ class FuncGen:
             Select which user memory to compare with
         normalise : bool, default `True`
             Normalise test waveform
-
         Returns
         -------
         bool
@@ -728,12 +710,10 @@ class FuncGen:
 
     def _check_arb_waveform_length(self, waveform: np.ndarray):
         """Checks if waveform is within the acceptable length
-
         Parameters
         ----------
         waveform : array_like
             Waveform or voltage list to be checked
-
         Raises
         ------
         ValueError
@@ -752,12 +732,10 @@ class FuncGen:
     def _check_arb_waveform_type_and_range(self, waveform: np.ndarray):
         """Checks if waveform is of int/np.int32 type and within the resolution
         of the function generator
-
         Parameters
         ----------
         waveform : array_like
             Waveform or voltage list to be checked
-
         Raises
         ------
         ValueError
@@ -783,7 +761,6 @@ class FuncGen:
 
 class FuncGenChannel:
     """Class for controlling a channel on a function generator object
-
     Parameters
     ----------
     fgen : `FuncGen`
@@ -793,7 +770,6 @@ class FuncGenChannel:
     impedance : {"50ohm", "highZ"}
         Determines voltage limits associated with high impedance (whether the
         instrument is using 50ohm or high Z cannot be controlled through VISA)
-
     Attributes
     ----------
     _fgen : `FuncGen`
@@ -823,7 +799,6 @@ class FuncGenChannel:
     def _impedance_dependent_limit(self, limit_type: str) -> bool:
         """Check if the limit type is impedance dependent (voltages) or
         not (frequency)
-
         Returns
         -------
         bool
@@ -874,7 +849,6 @@ class FuncGenChannel:
     ) -> bool:
         """Set a limit if the new value is within the instrument limits and are
         self consistent (max larger than min)
-
         Parameterers
         ------------
         limit_type : str
@@ -886,7 +860,6 @@ class FuncGenChannel:
         verbose : bool
             Print confirmation that the limit was set or reason for why the
             limit was not set
-
         Returns
         -------
         bool
@@ -956,6 +929,10 @@ class FuncGenChannel:
         """Returns frequency in Hertz"""
         return float(self._fgen.query(f"{self._source}FREQuency?"))
 
+    def get_phase(self) -> float:
+        """Returns phase in RAD"""
+        return float(self._fgen.query(f"{self._source}PHASe:ADJust?"))
+
     # Get limits set in the channel class
     def get_frequency_lims(self) -> List[float]:
         """Returns list of min and max frequency limits"""
@@ -977,7 +954,6 @@ class FuncGenChannel:
 
     def get_settings(self) -> dict:
         """Get the settings for the channel
-
         Returns
         -------
         current_settings : dict
@@ -991,6 +967,7 @@ class FuncGenChannel:
             "amplitude": (self.get_amplitude(), "Vpp"),
             "offset": (self.get_offset(), "V"),
             "frequency": (self.get_frequency(), "Hz"),
+            "phase": (self.get_phase(), "RAD"),
         }
 
     def print_settings(self):
@@ -1008,7 +985,6 @@ class FuncGenChannel:
         """Set the settings of the channel with a settings dictionary. Will
         set the outout to OFF before applyign the settings (and turn the
         channel ON or leave it OFF depending on the settings dict)
-
         Parameteres
         -----------
         settings : dict
@@ -1027,13 +1003,11 @@ class FuncGenChannel:
 
     def set_output_state(self, state: Union[int, str]):
         """Enables or diables the output of the channel
-
         Parameters
         ----------
         state : int or str
             "ON" or int 1 to enable
             "OFF" or int 0 to disable
-
         Raises
         ------
         NotSetError
@@ -1065,7 +1039,6 @@ class FuncGenChannel:
 
     def set_function(self, shape: str):
         """Set the function shape of the output
-
         Parameters
         ----------
         shape : {SINusoid, SQUare, PULSe, RAMP, PRNoise, <Built_in>, USER[0],
@@ -1077,7 +1050,6 @@ class FuncGenChannel:
             BesselJ|BesselY|ErrorFunc|Airy|Rectangle|Gauss|Hamming|Hanning|
             Bartlett|Blackman|Laylight|Triangle|DC|Heart|Round|Chirp|Rhombus|
             Cardiac}
-
         Raises
         ------
         NotSetError
@@ -1101,13 +1073,11 @@ class FuncGenChannel:
 
     def set_amplitude(self, amplitude: float):
         """Set the peak-to-peak amplitude in volts
-
         Parameters
         ----------
         amplitude : float or {"max", "min"}
             0.1mV or four digits resolution, "max" or "min" will set the
             amplitude to the maximum or minimum limit given in `channel_limits`
-
         Raises
         ------
         NotSetError
@@ -1171,13 +1141,11 @@ class FuncGenChannel:
 
     def set_offset(self, offset: float, unit: str = "V"):
         """Set offset in volts (or mV, see options)
-
         Parameters
         ----------
         offset : float
             Unknown resolution, guessing 0.1mV or four digits resolution
         unit : {mV, V}, default V
-
         Raises
         ------
         NotSetError
@@ -1199,6 +1167,7 @@ class FuncGenChannel:
                 f"the absolute voltage limits [{min_volt}, {max_volt}]V"
             )
             raise NotSetError(msg)
+
         # Set the offset
         cmd = f"{self._source}VOLTage:LEVel:OFFSet {offset}{unit}"
         err_msg = f"set offset {offset}{unit}"
@@ -1219,13 +1188,11 @@ class FuncGenChannel:
 
     def set_frequency(self, freq: float, unit: str = "Hz"):
         """Set the frequency in Hertz (or mHz, kHz, MHz, see options)
-
         Parameters
         ----------
         freq : float
             The resolution is 1 μHz or 12 digits.
         unit : {mHz, Hz, kHz, MHz}, default Hz
-
         Raises
         ------
         NotSetError
@@ -1271,13 +1238,61 @@ class FuncGenChannel:
                 )
                 raise NotSetError(msg)
 
+    def set_phase(self, phase: float, unit: str = "DEG"):
+        """Set the phase
+        Parameters
+        ----------
+        phase : float
+            -360 degrees ~ 360 degrees
+        unit : str
+            RAD –2 PI to +2 PI, relative to phase value
+            DEG –360 to +360, relative to phase value
+        Raises
+        ------
+        """
+        # Check if the given frequency is within the current limits
+        phase = round(phase, 4)
+        if unit == "DEG":
+            min_phase, max_phase = -360, 360
+        else:
+            min_phase, max_phase = -2*np.pi, 2*np.pi
+        if phase < min_phase or phase > max_phase:
+                msg = (
+                    f"Could not set the phase {phase}rad as it is not "
+                    f"within the phase limits set for the instrument "
+                    f"[{min_phase}, {max_phase}]rad/degrees"
+                )
+                raise NotSetError(msg)
+        # Set the phase
+        self._fgen.write(
+            f"{self._source}PHASE:ADJUST {phase}{unit}",
+            custom_err_message=f"set phase {phase}{unit}",
+        )
+        if self._fgen.verify_param_set:
+            actual_phase = self.get_phase()
+            # Multiply with the appropriate factor according to SI prefix, or
+            # if string is empty, use the value looked up from channel_limits earlier
+            if unit == "RAD":
+                check_phase = phase
+            else:
+                check_phase = phase / np.pi
+            if not actual_phase == check_phase:
+                msg = (
+                    f"Phase {phase}{unit} was not set on channel {self._channel}"
+                    f", it is {actual_phase} rad. Check that the number is within "
+                    f"the possible range and in the correct format.\nError "
+                    f"from the instrument: {self._fgen.get_error()}"
+                )
+                raise NotSetError(msg)
 
-## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ EXAMPLES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
-
+"""
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ EXAMPLES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def example_basic_control(address: str):
-    """Example showing how to connect, and the most basic control of the
-    instrument parameters"""
+    \"""Example showing how to connect, and the most basic control of the
+    instrument parameters\"""
     print("\n\n", example_basic_control.__doc__)
     with FuncGen(address) as fgen:
         fgen.ch1.set_function("SIN")
@@ -1291,8 +1306,8 @@ def example_basic_control(address: str):
 
 
 def example_change_settings(address: str):
-    """Example showing how to get the current settings of the instrument,
-    store them, change a setting and then restore the initial settings"""
+    \"""Example showing how to get the current settings of the instrument,
+    store them, change a setting and then restore the initial settings\"""
     print("\n\n", example_change_settings.__doc__)
     with FuncGen(address) as fgen:
         fgen.print_settings()
@@ -1307,8 +1322,8 @@ def example_change_settings(address: str):
 
 
 def example_lock_frequencies(address: str):
-    """Example showing the frequency being set to 10Hz and then the frequency
-    lock enabled, using the frequency at ch1 as the common frequency"""
+    \"""Example showing the frequency being set to 10Hz and then the frequency
+    lock enabled, using the frequency at ch1 as the common frequency\"""
     print("\n\n", example_lock_frequencies.__doc__)
     with FuncGen(address, verbose=False) as fgen:
         fgen.ch1.set_frequency(10)
@@ -1316,7 +1331,7 @@ def example_lock_frequencies(address: str):
 
 
 def example_changing_limits(address: str):
-    """Example showing how limits can be read and changed"""
+    \"""Example showing how limits can be read and changed""\"
     print("\n\n", example_changing_limits.__doc__)
     with FuncGen(address) as fgen:
         lims = fgen.ch1.get_frequency_lims()
@@ -1338,8 +1353,9 @@ def example_set_and_use_custom_waveform(
     channel: int = 1,
     plot_signal: bool = True,
 ):
-    """Example showing a waveform being created, transferred to the instrument,
+    \"""Example showing a waveform being created, transferred to the instrument,
     and applied to a channel"""
+"""
     print("\n\n", example_set_and_use_custom_waveform.__doc__)
     # Create a signal
     x = np.linspace(0, 4 * np.pi, 8000)
@@ -1372,13 +1388,14 @@ def example_set_and_use_custom_waveform(
     if close_fgen:
         fgen.close()
 
+"""
 
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ MAIN FUNCTION ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
 
-if __name__ == "__main__":
-    example_basic_control(_VISA_ADDRESS)
-    example_change_settings(_VISA_ADDRESS)
-    example_lock_frequencies(_VISA_ADDRESS)
-    example_changing_limits(_VISA_ADDRESS)
-    with FuncGen(_VISA_ADDRESS) as fgen:
-        example_set_and_use_custom_waveform(fgen)
+# if __name__ == "__main__":
+#     example_basic_control(_VISA_ADDRESS)
+#     example_change_settings(_VISA_ADDRESS)
+#     example_lock_frequencies(_VISA_ADDRESS)
+#     example_changing_limits(_VISA_ADDRESS)
+#     with FuncGen(_VISA_ADDRESS) as fgen:
+#         example_set_and_use_custom_waveform(fgen)
